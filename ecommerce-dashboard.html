@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-Commerce Sales Analysis Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161d;
+    --surface2: #1a1e28;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --accent: #6ee7b7;
+    --accent2: #f59e0b;
+    --accent3: #60a5fa;
+    --accent4: #f472b6;
+    --danger: #f87171;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-left .eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .header-left h1 {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .header-left .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .header-right {
+    text-align: right;
+  }
+  .header-right .dataset-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+  .header-right .date-range {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* KPI row */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .kpi-card:hover { border-color: var(--border2); }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .kpi-card.green::before { background: var(--accent); }
+  .kpi-card.amber::before { background: var(--accent2); }
+  .kpi-card.blue::before { background: var(--accent3); }
+  .kpi-card.pink::before { background: var(--accent4); }
+
+  .kpi-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+  .kpi-value {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .kpi-card.green .kpi-value { color: var(--accent); }
+  .kpi-card.amber .kpi-value { color: var(--accent2); }
+  .kpi-card.blue .kpi-value { color: var(--accent3); }
+  .kpi-card.pink .kpi-value { color: var(--accent4); }
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* Grid layout for charts */
+  .grid-main {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .grid-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+  .chart-card:hover { border-color: var(--border2); }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .card-sub {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .card-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    border: 1px solid;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .badge-green { color: var(--accent); border-color: rgba(110,231,183,0.25); background: rgba(110,231,183,0.06); }
+  .badge-amber { color: var(--accent2); border-color: rgba(245,158,11,0.25); background: rgba(245,158,11,0.06); }
+  .badge-blue { color: var(--accent3); border-color: rgba(96,165,250,0.25); background: rgba(96,165,250,0.06); }
+
+  canvas { display: block; }
+
+  /* Insight box */
+  .insight-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 14px;
+    margin-top: 14px;
+  }
+  .insight-box .insight-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 5px;
+  }
+  .insight-box p {
+    font-size: 12px;
+    color: #a3aab8;
+    line-height: 1.6;
+  }
+  .insight-box strong { color: var(--text); font-weight: 500; }
+  .insight-box.amber { border-left-color: var(--accent2); }
+  .insight-box.amber .insight-label { color: var(--accent2); }
+  .insight-box.blue { border-left-color: var(--accent3); }
+  .insight-box.blue .insight-label { color: var(--accent3); }
+  .insight-box.pink { border-left-color: var(--accent4); }
+  .insight-box.pink .insight-label { color: var(--accent4); }
+
+  /* Country bar list */
+  .country-list { display: flex; flex-direction: column; gap: 8px; }
+  .country-row { display: flex; align-items: center; gap: 10px; }
+  .country-name { font-size: 12px; color: var(--text); min-width: 70px; }
+  .country-bar-wrap { flex: 1; height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .country-bar-fill { height: 100%; border-radius: 3px; }
+  .country-val { font-family: var(--mono); font-size: 10px; color: var(--muted); min-width: 52px; text-align: right; }
+
+  /* Product table */
+  .prod-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+  .prod-table th { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; padding: 0 0 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  .prod-table td { padding: 9px 0; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  .prod-table tr:last-child td { border-bottom: none; }
+  .prod-table .prod-name { font-size: 11px; color: #9ca3af; max-width: 130px; }
+  .prod-table .prod-rev { font-family: var(--mono); font-size: 11px; color: var(--accent); text-align: right; }
+  .prod-rank { font-family: var(--mono); font-size: 10px; color: var(--muted); padding-right: 10px; }
+  .mini-bar-wrap { width: 60px; height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 6px; }
+  .mini-bar { height: 100%; background: var(--accent); border-radius: 2px; }
+
+  /* Footer */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+
+  /* Animate on load */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .kpi-card { animation: fadeUp 0.4s ease both; }
+  .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+  .kpi-card:nth-child(2) { animation-delay: 0.1s; }
+  .kpi-card:nth-child(3) { animation-delay: 0.15s; }
+  .kpi-card:nth-child(4) { animation-delay: 0.2s; }
+  .chart-card { animation: fadeUp 0.5s ease both; animation-delay: 0.25s; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="eyebrow">Portfolio Project · Data Analysis</div>
+    <h1>E-Commerce Sales Dashboard</h1>
+    <div class="subtitle">UK-based online retailer · Revenue, Products & Customer Intelligence</div>
+  </div>
+  <div class="header-right">
+    <div class="dataset-tag">UCI Online Retail Dataset</div><br>
+    <div class="date-range">Dec 2010 – Dec 2011 &nbsp;·&nbsp; 541,909 transactions</div>
+  </div>
+</div>
+
+<!-- KPI Row -->
+<div class="kpi-row">
+  <div class="kpi-card green">
+    <div class="kpi-label">Total Revenue</div>
+    <div class="kpi-value">£9.1M</div>
+    <div class="kpi-sub">Across 13 months of trading</div>
+  </div>
+  <div class="kpi-card amber">
+    <div class="kpi-label">Peak Month</div>
+    <div class="kpi-value">£1.16M</div>
+    <div class="kpi-sub">Nov 2011 — holiday surge</div>
+  </div>
+  <div class="kpi-card blue">
+    <div class="kpi-label">Revenue from UK</div>
+    <div class="kpi-value">83%</div>
+    <div class="kpi-sub">£7.3M of total; 37 countries served</div>
+  </div>
+  <div class="kpi-card pink">
+    <div class="kpi-label">Top Customer</div>
+    <div class="kpi-value">£280K</div>
+    <div class="kpi-sub">Single customer, 3.8% of UK revenue</div>
+  </div>
+</div>
+
+<!-- Main grid: Revenue trend + Country breakdown -->
+<div class="grid-main">
+
+  <!-- Monthly revenue trend -->
+  <div class="chart-card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Monthly Revenue Trend</div>
+        <div class="card-sub">Dec 2010 – Dec 2011</div>
+      </div>
+      <span class="card-badge badge-green">+103% peak vs trough</span>
+    </div>
+    <div style="position:relative;height:200px;">
+      <canvas id="revenueChart"></canvas>
+    </div>
+    <div class="insight-box">
+      <div class="insight-label">Key insight</div>
+      <p>Revenue almost <strong>doubles from Feb to Nov 2011</strong> (£447K → £1.16M). The Sep–Nov surge (+47% in 3 months) signals <strong>strong seasonal demand</strong> ahead of the UK holiday season. Feb is the weakest month — a prime window for promotions.</p>
+    </div>
+  </div>
+
+  <!-- Country revenue -->
+  <div class="chart-card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Revenue by Country</div>
+        <div class="card-sub">Top 7 markets</div>
+      </div>
+      <span class="card-badge badge-blue">37 countries</span>
+    </div>
+    <div class="country-list" style="margin-top:6px">
+      <div class="country-row">
+        <span class="country-name">UK</span>
+        <div class="country-bar-wrap"><div class="country-bar-fill" style="width:100%;background:var(--accent)"></div></div>
+        <span class="country-val">£7.31M</span>
+      </div>
+      <div class="country-row">
+        <span class="country-name">Netherlands</span>
+        <div class="country-bar-wrap"><div class="country-bar-fill" style="width:3.9%;background:var(--accent3)"></div></div>
+        <span class="country-val">£285K</span>
+      </div>
+      <div class="country-row">
+        <span class="country-name">Ireland</span>
+        <div class="country-bar-wrap"><div class="country-bar-fill" style="width:3.6%;background:var(--accent3)"></div></div>
+        <span class="country-val">£266K</span>
+      </div>
+      <div class="country-row">
+        <span class="country-name">Germany</span>
+        <div class="country-bar-wrap"><div class="country-bar-fill" style="width:3.1%;background:var(--accent3)"></div></div>
+        <span class="country-val">£229K</span>
+      </div>
+      <div class="country-row">
+        <span class="country-name">France</span>
+        <div class="country-bar-wrap"><div class="country-bar-fill" style="width:2.9%;background:var(--accent3)"></div></div>
+        <span class="country-val">£209K</span>
+      </div>
+      <div class="country-row">
+        <span class="country-name">Australia</span>
+        <div class="country-bar-wrap"><div class="country-bar-fill" style="width:1.9%;background:var(--accent2)"></div></div>
+        <span class="country-val">£139K</span>
+      </div>
+      <div class="country-row">
+        <span class="country-name">Spain</span>
+        <div class="country-bar-wrap"><div class="country-bar-fill" style="width:0.84%;background:var(--accent2)"></div></div>
+        <span class="country-val">£62K</span>
+      </div>
+    </div>
+    <div class="insight-box blue" style="margin-top:14px">
+      <div class="insight-label">Key insight</div>
+      <p><strong>83% revenue concentration in UK</strong> is a business risk. Netherlands & Ireland show <strong>strong international appetite</strong> — scaling in EU markets could diversify revenue significantly.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom grid -->
+<div class="grid-bottom">
+
+  <!-- Top products by revenue -->
+  <div class="chart-card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Top Products by Revenue</div>
+        <div class="card-sub">Highest-earning SKUs</div>
+      </div>
+      <span class="card-badge badge-green">Top 8</span>
+    </div>
+    <table class="prod-table">
+      <thead><tr><th>#</th><th>Product</th><th style="text-align:right">Revenue</th></tr></thead>
+      <tbody>
+        <tr><td class="prod-rank">1</td><td class="prod-name">Paper Craft Little Birdie<div class="mini-bar-wrap"><div class="mini-bar" style="width:100%"></div></div></td><td class="prod-rev">£168K</td></tr>
+        <tr><td class="prod-rank">2</td><td class="prod-name">Regency Cakestand 3 Tier<div class="mini-bar-wrap"><div class="mini-bar" style="width:85%"></div></div></td><td class="prod-rev">£143K</td></tr>
+        <tr><td class="prod-rank">3</td><td class="prod-name">White Heart T-Light Holder<div class="mini-bar-wrap"><div class="mini-bar" style="width:60%"></div></div></td><td class="prod-rev">£100K</td></tr>
+        <tr><td class="prod-rank">4</td><td class="prod-name">Jumbo Bag Red Retrospot<div class="mini-bar-wrap"><div class="mini-bar" style="width:51%"></div></div></td><td class="prod-rev">£85K</td></tr>
+        <tr><td class="prod-rank">5</td><td class="prod-name">Medium Ceramic Storage Jar<div class="mini-bar-wrap"><div class="mini-bar" style="width:48%"></div></div></td><td class="prod-rev">£81K</td></tr>
+        <tr><td class="prod-rank">6</td><td class="prod-name">Party Bunting<div class="mini-bar-wrap"><div class="mini-bar" style="width:41%"></div></div></td><td class="prod-rev">£69K</td></tr>
+        <tr><td class="prod-rank">7</td><td class="prod-name">Assorted Bird Ornament<div class="mini-bar-wrap"><div class="mini-bar" style="width:34%"></div></div></td><td class="prod-rev">£57K</td></tr>
+        <tr><td class="prod-rank">8</td><td class="prod-name">Rabbit Night Light<div class="mini-bar-wrap"><div class="mini-bar" style="width:30%"></div></div></td><td class="prod-rev">£51K</td></tr>
+      </tbody>
+    </table>
+    <div class="insight-box amber" style="margin-top:12px">
+      <div class="insight-label">Key insight</div>
+      <p><strong>Top 2 products alone = £311K</strong> (~3.5% of total revenue). Both are home decor/gifting items — confirming the retailer's core demographic buys <strong>seasonal decorative goods</strong>.</p>
+    </div>
+  </div>
+
+  <!-- Top products by volume (bar chart) -->
+  <div class="chart-card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Volume vs Revenue: Top Products</div>
+        <div class="card-sub">Units sold vs revenue generated</div>
+      </div>
+      <span class="card-badge badge-amber">Comparison</span>
+    </div>
+    <div style="position:relative;height:220px;">
+      <canvas id="volumeChart"></canvas>
+    </div>
+    <div class="insight-box pink" style="margin-top:12px">
+      <div class="insight-label">Key insight</div>
+      <p><strong>Paper Craft Birdie sells 81K units</strong> but ranks #1 in revenue too — high-volume AND high-value. Medium Ceramic Jar sells 78K units but earns less — <strong>lower price point, less margin</strong>. Volume ≠ profitability.</p>
+    </div>
+  </div>
+
+  <!-- Customer spending distribution -->
+  <div class="chart-card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Top 10 Customers by Spend</div>
+        <div class="card-sub">Revenue concentration analysis</div>
+      </div>
+      <span class="card-badge badge-blue">VIP segment</span>
+    </div>
+    <div style="position:relative;height:220px;">
+      <canvas id="customerChart"></canvas>
+    </div>
+    <div class="insight-box blue" style="margin-top:12px">
+      <div class="insight-label">Key insight</div>
+      <p>Top 10 customers contribute <strong>~£1.54M (17% of total revenue)</strong>. Customer #14646 alone spends 2× more than #3. Classic <strong>Pareto pattern</strong> — retaining these VIP customers is critical to revenue.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <span>Data: UCI Machine Learning Repository · Online Retail Dataset (2010–2011)</span>
+  <span>Analysis: Python (Pandas, Matplotlib) · SQL (MySQL) · <a href="#">GitHub →</a></span>
+</div>
+
+<script>
+Chart.defaults.color = '#6b7280';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size = 11;
+
+// Monthly Revenue Chart
+const revCtx = document.getElementById('revenueChart').getContext('2d');
+const months = ['Dec-10','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec-11'];
+const revData = [572714,569445,447137,595501,469200,678595,661214,600091,645344,952838,1039319,1161817,518193];
+
+const gradient = revCtx.createLinearGradient(0, 0, 0, 200);
+gradient.addColorStop(0, 'rgba(110,231,183,0.25)');
+gradient.addColorStop(1, 'rgba(110,231,183,0.0)');
+
+new Chart(revCtx, {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [{
+      data: revData,
+      borderColor: '#6ee7b7',
+      borderWidth: 2,
+      backgroundColor: gradient,
+      fill: true,
+      tension: 0.4,
+      pointRadius: 3,
+      pointBackgroundColor: '#6ee7b7',
+      pointBorderColor: '#0d0f14',
+      pointBorderWidth: 1.5,
+      pointHoverRadius: 5,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1a1e28',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        titleColor: '#e8eaf0',
+        bodyColor: '#6ee7b7',
+        callbacks: {
+          label: ctx => ' £' + Math.round(ctx.raw).toLocaleString()
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { font: { size: 10 } } },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        ticks: {
+          font: { size: 10 },
+          callback: v => '£' + (v/1000).toFixed(0) + 'K'
+        }
+      }
+    }
+  }
+});
+
+// Volume vs Revenue comparison chart
+const volCtx = document.getElementById('volumeChart').getContext('2d');
+const products = ['Birdie','Ceramic Jar','Retrospot Bag','Heart Holder','Bird Ornament'];
+new Chart(volCtx, {
+  type: 'bar',
+  data: {
+    labels: products,
+    datasets: [
+      {
+        label: 'Units (K)',
+        data: [81.0, 77.9, 46.2, 36.7, 35.4],
+        backgroundColor: 'rgba(96,165,250,0.7)',
+        borderColor: 'rgba(96,165,250,0)',
+        borderWidth: 0,
+        borderRadius: 4,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Revenue (£K)',
+        data: [168.5, 81.4, 85.2, 100.4, 56.6],
+        backgroundColor: 'rgba(110,231,183,0.7)',
+        borderColor: 'rgba(110,231,183,0)',
+        borderWidth: 0,
+        borderRadius: 4,
+        yAxisID: 'y'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        align: 'end',
+        labels: { boxWidth: 10, boxHeight: 10, padding: 12, font: { size: 10 }, color: '#6b7280' }
+      },
+      tooltip: {
+        backgroundColor: '#1a1e28',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        titleColor: '#e8eaf0',
+        bodyColor: '#a3aab8',
+      }
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { font: { size: 9 }, maxRotation: 30 }
+      },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        ticks: { font: { size: 9 }, callback: v => v + 'K' }
+      }
+    }
+  }
+});
+
+// Customer spend chart
+const custCtx = document.getElementById('customerChart').getContext('2d');
+const customerIds = ['#14646','#18102','#17450','#16446','#14911','#12415','#14156','#17511','#16029','#12346'];
+const custSpend = [280206,259657,194551,168473,143825,124915,117380,91062,81025,77184];
+
+new Chart(custCtx, {
+  type: 'bar',
+  data: {
+    labels: customerIds,
+    datasets: [{
+      data: custSpend,
+      backgroundColor: custSpend.map((v, i) => i === 0 ? 'rgba(244,114,182,0.8)' : 'rgba(96,165,250,0.5)'),
+      borderRadius: 4,
+      borderWidth: 0,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1a1e28',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        titleColor: '#e8eaf0',
+        bodyColor: '#60a5fa',
+        callbacks: { label: ctx => ' £' + Math.round(ctx.raw).toLocaleString() }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        ticks: { font: { size: 9 }, callback: v => '£' + (v/1000).toFixed(0) + 'K' }
+      },
+      y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+    }
+  }
+});
+</script>
+</body>
+</html>
